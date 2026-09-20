@@ -1,0 +1,42 @@
+[project]
+name = "laya-api"
+version = "0.1.0"
+description = "Dockerized Laya prediction API"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "laya>=0.3.4",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "torch>=2.5",
+    "transformers>=4.48",
+]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["ruff>=0.9"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "B008", # FastAPI Depends()/Header() in defaults is intentional
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

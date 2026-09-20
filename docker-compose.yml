@@ -1,0 +1,25 @@
+services:
+  laya-api:
+    build:
+      context: .
+      args:
+        PRELOAD_MODEL: ${PRELOAD_MODEL:-0}
+        MODELS: ${MODELS:-english}
+    image: laya-api:latest
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    environment:
+      PORT: ${PORT:-8000}
+      API_KEYS: ${API_KEYS:-change-me}
+      BASIC_AUTH: ${BASIC_AUTH:-}
+      MAX_BULK_ITEMS: ${MAX_BULK_ITEMS:-256}
+      MODELS: ${MODELS:-english}
+      MODEL_ID: ${MODEL_ID:-convaiinnovations/laya}
+      MODEL_SUBFOLDER: ${MODEL_SUBFOLDER:-}
+      DEVICE: ${DEVICE:-cpu}
+    volumes:
+      - hf-cache:/data/hf
+    restart: unless-stopped
+
+volumes:
+  hf-cache:
