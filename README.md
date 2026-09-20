@@ -8,8 +8,9 @@ with `model`. Docs: `/docs` (Swagger UI) and `/openapi.json`.
 ## Quick start
 
 ```sh
-# run the published image
-docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/laya:latest
+# pull and run the published image
+docker pull ghcr.io/chneau/laya
+docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/laya
 
 # or build locally
 cp .env.example .env          # set API_KEYS
