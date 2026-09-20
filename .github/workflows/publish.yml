@@ -13,6 +13,7 @@ env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/laya
 
 jobs:
+  # Fast, no torch and no Docker: lockfile, lint, and OpenAPI schema.
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -29,7 +30,13 @@ jobs:
           uvx ruff check .
           uvx ruff format --check .
 
+      - name: Validate OpenAPI schema
+        run: |
+          uv run --no-project --with 'fastapi>=0.115' --with 'pydantic>=2' python -c "import sys; sys.path.insert(0, '.'); from app.main import app; s = app.openapi(); assert '/predict' in s['paths'] and '/predict/bulk' in s['paths']; print('openapi ok:', list(s['paths']))"
+
+  # Pull requests: build the image once and check it boots.
   test:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,14 +51,30 @@ jobs:
           load: true
           tags: laya-api:test
           cache-from: type=gha,scope=amd64
-          cache-to: type=gha,mode=max,scope=amd64
 
-      - name: Smoke test (app + OpenAPI, no model download)
+      - name: Container smoke test
         run: |
-          docker run --rm --entrypoint python laya-api:test -c "from app.main import app; s = app.openapi(); assert '/predict' in s['paths'] and '/predict/bulk' in s['paths']; print('openapi ok', list(s['paths']))"
+          docker run --rm --entrypoint python laya-api:test -c "from app.main import app; s = app.openapi(); assert '/predict' in s['paths']; print('container ok')"
+
+  # Nightly / manual / release: real model download + inference.
+  smoke:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: laya-api:test
+          cache-from: type=gha,scope=amd64
 
       - name: Full inference smoke test
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         run: |
           docker run -d --name laya-api -p 8000:8000 -e API_KEYS=test laya-api:test
           for i in $(seq 1 150); do
@@ -65,8 +88,9 @@ jobs:
           docker logs laya-api
           docker rm -f laya-api
 
+  # Build each platform natively (no QEMU) and push by digest.
   build:
-    needs: [lint, test]
+    needs: lint
     if: github.event_name != 'pull_request'
     runs-on: ${{ matrix.runner }}
     permissions:
@@ -76,7 +100,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Native runners per platform -- no QEMU emulation.
           - platform: linux/amd64
             runner: ubuntu-latest
             scope: amd64
@@ -120,6 +143,7 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # Combine the per-platform digests into one multi-arch manifest list.
   merge:
     needs: build
     runs-on: ubuntu-latest
