@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: laya
-          image: auenkr/laya-server:laya-english-amd64
+          image: auenkr/laya-server@sha256:1ead3c2d7e96ecb4c5c734e70f53584d752bff12811ba9b115cff180a49f5f57
           imagePullPolicy: Always
           ports:
             - name: http
