@@ -6,265 +6,19 @@
     "version": "0.5.0"
   },
   "paths": {
-    "/healthz": {
-      "get": {
-        "tags": [
-          "meta"
-        ],
-        "summary": "Health check",
-        "operationId": "healthz_healthz_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/models": {
-      "get": {
-        "tags": [
-          "meta"
-        ],
-        "summary": "List checkpoints",
-        "description": "Available checkpoints and which are currently resident.",
-        "operationId": "list_models_models_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ModelsResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials"
-          },
-          "503": {
-            "description": "Model not loaded yet"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKeyAuth": []
-          },
-          {
-            "BearerAuth": []
-          },
-          {
-            "BasicAuth": []
-          }
-        ]
-      }
-    },
-    "/presets": {
-      "get": {
-        "tags": [
-          "meta"
-        ],
-        "summary": "List built-in question presets",
-        "description": "Return the ready-to-use question sets (triage/email/guard/moderation/router).",
-        "operationId": "list_presets_presets_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "type": "object",
-                  "title": "Response List Presets Presets Get"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials"
-          },
-          "503": {
-            "description": "Model not loaded yet"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKeyAuth": []
-          },
-          {
-            "BearerAuth": []
-          },
-          {
-            "BasicAuth": []
-          }
-        ]
-      }
-    },
-    "/detect": {
-      "post": {
-        "tags": [
-          "meta"
-        ],
-        "summary": "Detect script and language",
-        "description": "Report script, best-effort language and `is_english` for a state (what routing uses).",
-        "operationId": "detect_detect_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DetectRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Detect Detect Post"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials"
-          },
-          "503": {
-            "description": "Model not loaded yet"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKeyAuth": []
-          },
-          {
-            "BearerAuth": []
-          },
-          {
-            "BasicAuth": []
-          }
-        ]
-      }
-    },
-    "/email/state": {
-      "post": {
-        "tags": [
-          "meta"
-        ],
-        "summary": "Build a clean email state",
-        "description": "Clean an email body and structure it as a state for `/predict`.",
-        "operationId": "email_state_endpoint_email_state_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmailStateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Email State Endpoint Email State Post"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials"
-          },
-          "503": {
-            "description": "Model not loaded yet"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKeyAuth": []
-          },
-          {
-            "BearerAuth": []
-          },
-          {
-            "BasicAuth": []
-          }
-        ]
-      }
-    },
-    "/predict": {
+    "/v1/systemone": {
       "post": {
         "tags": [
           "predict"
         ],
-        "summary": "Predict one state",
-        "description": "Run typed questions over a single state and return calibrated answers.",
-        "operationId": "predict_predict_post",
+        "summary": "TypeSafe-compatible prediction",
+        "description": "Evaluate a TypeSafe-shaped request using a Laya checkpoint.",
+        "operationId": "typesafe_predict_v1_systemone_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PredictRequest"
+                "$ref": "#/components/schemas/TypeSafeRequest"
               }
             }
           },
@@ -276,66 +30,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PredictResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid credentials"
-          },
-          "503": {
-            "description": "Model not loaded yet"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKeyAuth": []
-          },
-          {
-            "BearerAuth": []
-          },
-          {
-            "BasicAuth": []
-          }
-        ]
-      }
-    },
-    "/predict/bulk": {
-      "post": {
-        "tags": [
-          "predict"
-        ],
-        "summary": "Predict many states",
-        "description": "Run typed questions over many states.\n\nAccepts either `states` with shared `questions`/`preset`, or `items` where each\nstate can override its questions and model. Laya's public API predicts one state\nat a time (its internals can batch, but the public `Agent.predict` cannot), so\nthis loops. Per-state errors are isolated and returned inline.",
-        "operationId": "predict_bulk_predict_bulk_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BulkPredictRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BulkPredictResponse"
+                  "$ref": "#/components/schemas/TypeSafeResponse"
                 }
               }
             }
@@ -373,315 +68,20 @@
   },
   "components": {
     "schemas": {
-      "ActionResult": {
+      "HTTPValidationError": {
         "properties": {
-          "act_probability": {
-            "type": "number",
-            "title": "Act Probability",
-            "description": "Probability the model acted at all."
-          }
-        },
-        "type": "object",
-        "required": [
-          "act_probability"
-        ],
-        "title": "ActionResult"
-      },
-      "BulkItem": {
-        "properties": {
-          "state": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              }
-            ],
-            "title": "State"
-          },
-          "questions": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ChoiceQuestion"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ScoreQuestion"
-                    },
-                    {
-                      "$ref": "#/components/schemas/NoulQuestion"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "choice": "#/components/schemas/ChoiceQuestion",
-                      "noul": "#/components/schemas/NoulQuestion",
-                      "score": "#/components/schemas/ScoreQuestion"
-                    }
-                  }
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Questions",
-            "description": "Overrides the request-level questions for this item."
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "english",
-                  "multilingual",
-                  "typed-decisions"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model",
-            "description": "Overrides the request-level model for this item."
-          }
-        },
-        "type": "object",
-        "required": [
-          "state"
-        ],
-        "title": "BulkItem",
-        "description": "One state with optional per-item questions and model override."
-      },
-      "BulkItemResult": {
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "title": "Ok"
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PredictResponse"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          }
-        },
-        "type": "object",
-        "required": [
-          "ok"
-        ],
-        "title": "BulkItemResult"
-      },
-      "BulkPredictRequest": {
-        "properties": {
-          "states": {
-            "anyOf": [
-              {
-                "items": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "additionalProperties": true,
-                      "type": "object"
-                    },
-                    {
-                      "items": {},
-                      "type": "array"
-                    }
-                  ]
-                },
-                "type": "array",
-                "minItems": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "States",
-            "description": "States to classify with the shared `questions`/`preset`."
-          },
-          "questions": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ChoiceQuestion"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ScoreQuestion"
-                    },
-                    {
-                      "$ref": "#/components/schemas/NoulQuestion"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "choice": "#/components/schemas/ChoiceQuestion",
-                      "noul": "#/components/schemas/NoulQuestion",
-                      "score": "#/components/schemas/ScoreQuestion"
-                    }
-                  }
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Questions",
-            "description": "Questions applied to each state."
-          },
-          "preset": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "triage",
-                  "email",
-                  "guard",
-                  "moderation",
-                  "router"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preset",
-            "description": "Preset questions for each state."
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "english",
-                  "multilingual",
-                  "typed-decisions"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model",
-            "description": "Pin a checkpoint for all states; omit to auto-route."
-          },
-          "items": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/BulkItem"
-                },
-                "type": "array",
-                "minItems": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Items",
-            "description": "Per-state items, each optionally overriding questions and model."
-          }
-        },
-        "type": "object",
-        "title": "BulkPredictRequest",
-        "examples": [
-          {
-            "questions": {
-              "department": {
-                "criteria": {
-                  "billing": "invoices, payments, refunds",
-                  "sales": "new purchases",
-                  "technical": "bugs and outages"
-                },
-                "instructions": "Which team should handle this request?",
-                "type": "choice"
-              },
-              "refund": {
-                "instructions": "Does the customer ask for money back?",
-                "type": "noul"
-              },
-              "urgency": {
-                "criteria": [
-                  "not urgent",
-                  "soon",
-                  "critical"
-                ],
-                "instructions": "How urgent is this request?",
-                "type": "score"
-              }
-            },
-            "states": [
-              "I was billed twice. Please refund the duplicate today.",
-              "The app crashes on launch."
-            ]
-          },
-          {
-            "items": [
-              {
-                "state": "I was billed twice."
-              },
-              {
-                "model": "english",
-                "state": "The app crashes."
-              }
-            ],
-            "preset": "triage"
-          }
-        ]
-      },
-      "BulkPredictResponse": {
-        "properties": {
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
-          "results": {
+          "detail": {
             "items": {
-              "$ref": "#/components/schemas/BulkItemResult"
+              "$ref": "#/components/schemas/ValidationError"
             },
             "type": "array",
-            "title": "Results"
+            "title": "Detail"
           }
         },
         "type": "object",
-        "required": [
-          "count",
-          "results"
-        ],
-        "title": "BulkPredictResponse"
+        "title": "HTTPValidationError"
       },
-      "ChoiceAnswer": {
+      "TypeSafeChoiceAnswer": {
         "properties": {
           "type": {
             "type": "string",
@@ -702,9 +102,6 @@
           "confidence": {
             "type": "number",
             "title": "Confidence"
-          },
-          "action": {
-            "$ref": "#/components/schemas/ActionResult"
           }
         },
         "type": "object",
@@ -712,12 +109,11 @@
           "type",
           "choice",
           "probabilities",
-          "confidence",
-          "action"
+          "confidence"
         ],
-        "title": "ChoiceAnswer"
+        "title": "TypeSafeChoiceAnswer"
       },
-      "ChoiceQuestion": {
+      "TypeSafeChoiceQuestion": {
         "properties": {
           "type": {
             "type": "string",
@@ -725,12 +121,10 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
-            "title": "Instructions",
-            "description": "What to decide, phrased as a question."
-          },
-          "criteria": {
             "anyOf": [
+              {
+                "type": "string"
+              },
               {
                 "additionalProperties": true,
                 "type": "object"
@@ -738,22 +132,111 @@
               {
                 "items": {},
                 "type": "array"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "criteria": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "items": {},
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Criteria"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "instructions",
+          "criteria"
+        ],
+        "title": "TypeSafeChoiceQuestion"
+      },
+      "TypeSafeNoulAnswer": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "noul",
+            "title": "Type"
+          },
+          "noul": {
+            "type": "number",
+            "title": "Noul"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "noul"
+        ],
+        "title": "TypeSafeNoulAnswer"
+      },
+      "TypeSafeNoulQuestion": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "noul",
+            "title": "Type"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "criteria": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    },
+                    {
+                      "items": {},
+                      "type": "array"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Criteria",
-            "description": "Option label -> description, or a plain list of labels. Descriptions may be strings or any JSON value (rendered as compact JSON).",
-            "examples": [
-              {
-                "billing": "invoices, payments, refunds",
-                "technical": [
-                  "bugs",
-                  "outages"
-                ]
-              }
-            ]
+            "title": "Criteria"
           }
         },
         "type": "object",
@@ -761,10 +244,9 @@
           "type",
           "instructions"
         ],
-        "title": "ChoiceQuestion",
-        "description": "Pick one labelled option, e.g. a routing department."
+        "title": "TypeSafeNoulQuestion"
       },
-      "DetectRequest": {
+      "TypeSafeRequest": {
         "properties": {
           "state": {
             "anyOf": [
@@ -781,335 +263,51 @@
               }
             ],
             "title": "State"
-          }
-        },
-        "type": "object",
-        "required": [
-          "state"
-        ],
-        "title": "DetectRequest"
-      },
-      "EmailStateRequest": {
-        "properties": {
-          "subject": {
-            "type": "string",
-            "title": "Subject",
-            "default": ""
-          },
-          "body": {
-            "type": "string",
-            "title": "Body"
-          },
-          "sender": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sender"
-          },
-          "clean": {
-            "type": "boolean",
-            "title": "Clean",
-            "description": "Strip quoted history, signatures, disclaimers.",
-            "default": true
-          }
-        },
-        "type": "object",
-        "required": [
-          "body"
-        ],
-        "title": "EmailStateRequest"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "HealthResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "model_loaded": {
-            "type": "boolean",
-            "title": "Model Loaded"
-          },
-          "device": {
-            "type": "string",
-            "title": "Device"
-          },
-          "auth_enabled": {
-            "type": "boolean",
-            "title": "Auth Enabled"
-          },
-          "auth_methods": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Auth Methods"
-          },
-          "models": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Models",
-            "description": "Checkpoints currently resident."
-          },
-          "available_models": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Available Models"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "model_loaded",
-          "device",
-          "auth_enabled",
-          "auth_methods",
-          "models",
-          "available_models"
-        ],
-        "title": "HealthResponse"
-      },
-      "ModelsResponse": {
-        "properties": {
-          "available": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Available"
-          },
-          "loaded": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Loaded"
-          }
-        },
-        "type": "object",
-        "required": [
-          "available",
-          "loaded"
-        ],
-        "title": "ModelsResponse"
-      },
-      "NoulAnswer": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "noul",
-            "title": "Type"
-          },
-          "noul": {
-            "type": "number",
-            "title": "Noul"
-          },
-          "confidence": {
-            "type": "number",
-            "title": "Confidence"
-          },
-          "action": {
-            "$ref": "#/components/schemas/ActionResult"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "noul",
-          "confidence",
-          "action"
-        ],
-        "title": "NoulAnswer"
-      },
-      "NoulQuestion": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "noul",
-            "title": "Type"
-          },
-          "instructions": {
-            "type": "string",
-            "title": "Instructions"
-          },
-          "criteria": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Criteria",
-            "description": "Optional `false`/`true` descriptions (any JSON value).",
-            "examples": [
-              {
-                "false": "a legitimate email",
-                "true": "phishing or fraud"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "instructions"
-        ],
-        "title": "NoulQuestion",
-        "description": "Yes/no decision without a learned neutral class (n-o-u-l)."
-      },
-      "PredictRequest": {
-        "properties": {
-          "state": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              }
-            ],
-            "title": "State",
-            "description": "Text, JSON object, or conversation turns to analyse."
-          },
-          "questions": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "oneOf": [
-                    {
-                      "$ref": "#/components/schemas/ChoiceQuestion"
-                    },
-                    {
-                      "$ref": "#/components/schemas/ScoreQuestion"
-                    },
-                    {
-                      "$ref": "#/components/schemas/NoulQuestion"
-                    }
-                  ],
-                  "discriminator": {
-                    "propertyName": "type",
-                    "mapping": {
-                      "choice": "#/components/schemas/ChoiceQuestion",
-                      "noul": "#/components/schemas/NoulQuestion",
-                      "score": "#/components/schemas/ScoreQuestion"
-                    }
-                  }
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Questions",
-            "description": "Map of question id -> typed question definition."
-          },
-          "preset": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "triage",
-                  "email",
-                  "guard",
-                  "moderation",
-                  "router"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Preset",
-            "description": "Built-in question set to use instead of `questions`."
           },
           "model": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "english",
-                  "multilingual",
-                  "typed-decisions"
-                ]
-              },
-              {
-                "type": "null"
-              }
+            "type": "string",
+            "enum": [
+              "laya-english",
+              "laya-multilingual",
+              "laya-typed-decisions"
             ],
-            "title": "Model",
-            "description": "Pin a checkpoint; omit to auto-route by language."
+            "title": "Model"
+          },
+          "questions": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TypeSafeChoiceQuestion"
+                },
+                {
+                  "$ref": "#/components/schemas/TypeSafeScoreQuestion"
+                },
+                {
+                  "$ref": "#/components/schemas/TypeSafeNoulQuestion"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "choice": "#/components/schemas/TypeSafeChoiceQuestion",
+                  "noul": "#/components/schemas/TypeSafeNoulQuestion",
+                  "score": "#/components/schemas/TypeSafeScoreQuestion"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Questions"
           }
         },
         "type": "object",
         "required": [
-          "state"
+          "state",
+          "model",
+          "questions"
         ],
-        "title": "PredictRequest",
-        "examples": [
-          {
-            "questions": {
-              "department": {
-                "criteria": {
-                  "billing": "invoices, payments, refunds",
-                  "sales": "new purchases",
-                  "technical": "bugs and outages"
-                },
-                "instructions": "Which team should handle this request?",
-                "type": "choice"
-              },
-              "refund": {
-                "instructions": "Does the customer ask for money back?",
-                "type": "noul"
-              },
-              "urgency": {
-                "criteria": [
-                  "not urgent",
-                  "soon",
-                  "critical"
-                ],
-                "instructions": "How urgent is this request?",
-                "type": "score"
-              }
-            },
-            "state": "I was billed twice. Please refund the duplicate today."
-          },
-          {
-            "preset": "triage",
-            "state": "Hi, we were billed twice for March."
-          }
-        ]
+        "title": "TypeSafeRequest"
       },
-      "PredictResponse": {
+      "TypeSafeResponse": {
         "properties": {
           "model": {
             "type": "string",
@@ -1119,21 +317,21 @@
             "additionalProperties": {
               "oneOf": [
                 {
-                  "$ref": "#/components/schemas/ChoiceAnswer"
+                  "$ref": "#/components/schemas/TypeSafeNoulAnswer"
                 },
                 {
-                  "$ref": "#/components/schemas/ScoreAnswer"
+                  "$ref": "#/components/schemas/TypeSafeChoiceAnswer"
                 },
                 {
-                  "$ref": "#/components/schemas/NoulAnswer"
+                  "$ref": "#/components/schemas/TypeSafeScoreAnswer"
                 }
               ],
               "discriminator": {
                 "propertyName": "type",
                 "mapping": {
-                  "choice": "#/components/schemas/ChoiceAnswer",
-                  "noul": "#/components/schemas/NoulAnswer",
-                  "score": "#/components/schemas/ScoreAnswer"
+                  "choice": "#/components/schemas/TypeSafeChoiceAnswer",
+                  "noul": "#/components/schemas/TypeSafeNoulAnswer",
+                  "score": "#/components/schemas/TypeSafeScoreAnswer"
                 }
               }
             },
@@ -1141,55 +339,18 @@
             "title": "Answers"
           },
           "usage": {
-            "$ref": "#/components/schemas/Usage"
-          },
-          "routing": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Routing"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "How the checkpoint was chosen (auto-route or pinned)."
+            "$ref": "#/components/schemas/TypeSafeUsage"
           }
         },
-        "additionalProperties": true,
         "type": "object",
         "required": [
           "model",
           "answers",
           "usage"
         ],
-        "title": "PredictResponse"
+        "title": "TypeSafeResponse"
       },
-      "Routing": {
-        "properties": {
-          "model": {
-            "type": "string",
-            "title": "Model"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "model"
-        ],
-        "title": "Routing"
-      },
-      "ScoreAnswer": {
+      "TypeSafeScoreAnswer": {
         "properties": {
           "type": {
             "type": "string",
@@ -1198,8 +359,7 @@
           },
           "score": {
             "type": "number",
-            "title": "Score",
-            "description": "Expected value on the 0-based criteria scale."
+            "title": "Score"
           },
           "legend": {
             "additionalProperties": {
@@ -1218,9 +378,6 @@
           "confidence": {
             "type": "number",
             "title": "Confidence"
-          },
-          "action": {
-            "$ref": "#/components/schemas/ActionResult"
           }
         },
         "type": "object",
@@ -1229,12 +386,11 @@
           "score",
           "legend",
           "probabilities",
-          "confidence",
-          "action"
+          "confidence"
         ],
-        "title": "ScoreAnswer"
+        "title": "TypeSafeScoreAnswer"
       },
-      "ScoreQuestion": {
+      "TypeSafeScoreQuestion": {
         "properties": {
           "type": {
             "type": "string",
@@ -1242,23 +398,39 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions"
           },
           "criteria": {
-            "items": {},
-            "type": "array",
-            "title": "Criteria",
-            "description": "Ordered levels, lowest first. Each may be any JSON value.",
-            "examples": [
-              [
-                "low",
+            "items": {
+              "anyOf": [
                 {
-                  "level": "high",
-                  "sla_minutes": 60
+                  "type": "string"
+                },
+                {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                {
+                  "items": {},
+                  "type": "array"
                 }
               ]
-            ]
+            },
+            "type": "array",
+            "title": "Criteria"
           }
         },
         "type": "object",
@@ -1267,10 +439,9 @@
           "instructions",
           "criteria"
         ],
-        "title": "ScoreQuestion",
-        "description": "Rate on an ordered scale, e.g. urgency."
+        "title": "TypeSafeScoreQuestion"
       },
-      "Usage": {
+      "TypeSafeUsage": {
         "properties": {
           "input_tokens": {
             "type": "integer",
@@ -1286,7 +457,7 @@
           "input_tokens",
           "output_tokens"
         ],
-        "title": "Usage"
+        "title": "TypeSafeUsage"
       },
       "ValidationError": {
         "properties": {

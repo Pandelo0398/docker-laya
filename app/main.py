@@ -37,6 +37,11 @@ DEVICE = os.environ.get("DEVICE", "cpu")
 
 AVAILABLE_MODELS = ("english", "multilingual", "typed-decisions")
 ModelName = Literal["english", "multilingual", "typed-decisions"]
+TypeSafeModelName = Literal[
+    "laya-english",
+    "laya-multilingual",
+    "laya-typed-decisions",
+]
 
 _state: dict[str, Any] = {}
 _lock = threading.Lock()
@@ -329,6 +334,76 @@ class PredictResponse(BaseModel):
     )
 
 
+TypeSafeInstruction = str | dict[str, Any] | list[Any]
+
+
+class TypeSafeChoiceQuestion(BaseModel):
+    type: Literal["choice"]
+    instructions: TypeSafeInstruction
+    criteria: dict[str, str | dict[str, Any] | list[Any] | None]
+
+
+class TypeSafeScoreQuestion(BaseModel):
+    type: Literal["score"]
+    instructions: TypeSafeInstruction
+    criteria: list[str | dict[str, Any] | list[Any]]
+
+
+class TypeSafeNoulQuestion(BaseModel):
+    type: Literal["noul"]
+    instructions: TypeSafeInstruction
+    criteria: dict[str, str | dict[str, Any] | list[Any] | None] | None = None
+
+
+TypeSafeQuestion = Annotated[
+    TypeSafeChoiceQuestion | TypeSafeScoreQuestion | TypeSafeNoulQuestion,
+    Field(discriminator="type"),
+]
+
+
+class TypeSafeRequest(BaseModel):
+    state: State
+    model: TypeSafeModelName
+    questions: dict[str, TypeSafeQuestion]
+
+
+class TypeSafeNoulAnswer(BaseModel):
+    type: Literal["noul"]
+    noul: float
+
+
+class TypeSafeChoiceAnswer(BaseModel):
+    type: Literal["choice"]
+    choice: str
+    probabilities: dict[str, float]
+    confidence: float
+
+
+class TypeSafeScoreAnswer(BaseModel):
+    type: Literal["score"]
+    score: float
+    legend: dict[str, str]
+    probabilities: dict[str, float]
+    confidence: float
+
+
+TypeSafeAnswer = Annotated[
+    TypeSafeNoulAnswer | TypeSafeChoiceAnswer | TypeSafeScoreAnswer,
+    Field(discriminator="type"),
+]
+
+
+class TypeSafeUsage(BaseModel):
+    input_tokens: int
+    output_tokens: int
+
+
+class TypeSafeResponse(BaseModel):
+    model: str
+    answers: dict[str, TypeSafeAnswer]
+    usage: TypeSafeUsage
+
+
 class BulkItemResult(BaseModel):
     ok: bool
     result: PredictResponse | None = None
@@ -428,6 +503,13 @@ def _resolve(
     return _dump(questions or {})
 
 
+_TYPESAFE_MODELS: dict[TypeSafeModelName, ModelName] = {
+    "laya-english": "english",
+    "laya-multilingual": "multilingual",
+    "laya-typed-decisions": "typed-decisions",
+}
+
+
 _AUTH_RESPONSES: dict[int | str, dict[str, Any]] = {
     401: {"description": "Missing or invalid credentials"},
     503: {"description": "Model not loaded yet"},
@@ -435,7 +517,12 @@ _AUTH_RESPONSES: dict[int | str, dict[str, Any]] = {
 
 
 # ------------------------------------------------------------------------- endpoints
-@app.get("/healthz", tags=["meta"], response_model=HealthResponse, summary="Health check")
+@app.get(
+    "/healthz",
+    include_in_schema=False,
+    response_model=HealthResponse,
+    summary="Health check",
+)
 def healthz() -> HealthResponse:
     router = _state.get("router")
     return HealthResponse(
@@ -451,130 +538,29 @@ def healthz() -> HealthResponse:
     )
 
 
-@app.get(
-    "/models",
-    tags=["meta"],
-    response_model=ModelsResponse,
-    summary="List checkpoints",
-    dependencies=[Depends(require_auth)],
-    responses=_AUTH_RESPONSES,
-)
-def list_models() -> ModelsResponse:
-    """Available checkpoints and which are currently resident."""
-    router = _router()
-    return ModelsResponse(available=list(AVAILABLE_MODELS), loaded=list(router.loaded))
-
-
-@app.get(
-    "/presets",
-    tags=["meta"],
-    summary="List built-in question presets",
-    dependencies=[Depends(require_auth)],
-    responses=_AUTH_RESPONSES,
-)
-def list_presets() -> dict[str, dict[str, Any]]:
-    """Return the ready-to-use question sets (triage/email/guard/moderation/router)."""
-    return _presets()
-
-
 @app.post(
-    "/detect",
-    tags=["meta"],
-    summary="Detect script and language",
-    dependencies=[Depends(require_auth)],
-    responses=_AUTH_RESPONSES,
-)
-def detect(request: DetectRequest) -> dict[str, Any]:
-    """Report script, best-effort language and `is_english` for a state (what routing uses)."""
-    from laya import detect_language
-
-    return detect_language(request.state)
-
-
-@app.post(
-    "/email/state",
-    tags=["meta"],
-    summary="Build a clean email state",
-    dependencies=[Depends(require_auth)],
-    responses=_AUTH_RESPONSES,
-)
-def email_state_endpoint(request: EmailStateRequest) -> dict[str, Any]:
-    """Clean an email body and structure it as a state for `/predict`."""
-    from laya import email_state
-
-    return email_state(request.subject, request.body, sender=request.sender, clean=request.clean)
-
-
-@app.post(
-    "/predict",
+    "/v1/systemone",
     tags=["predict"],
-    response_model=PredictResponse,
-    response_model_exclude_none=True,
-    summary="Predict one state",
+    response_model=TypeSafeResponse,
+    summary="TypeSafe-compatible prediction",
     dependencies=[Depends(require_auth)],
     responses=_AUTH_RESPONSES,
 )
-def predict(request: PredictRequest) -> PredictResponse:
-    """Run typed questions over a single state and return calibrated answers."""
+def typesafe_predict(request: TypeSafeRequest) -> TypeSafeResponse:
+    """Evaluate a TypeSafe-shaped request using a Laya checkpoint."""
     router = _router()
-    questions = _resolve(request.questions, request.preset)
     with _lock:
-        result = router.predict(request.state, questions, model=request.model)
-    return PredictResponse.model_validate(result)
-
-
-@app.post(
-    "/predict/bulk",
-    tags=["predict"],
-    response_model=BulkPredictResponse,
-    response_model_exclude_none=True,
-    summary="Predict many states",
-    dependencies=[Depends(require_auth)],
-    responses=_AUTH_RESPONSES,
-)
-def predict_bulk(request: BulkPredictRequest) -> BulkPredictResponse:
-    """Run typed questions over many states.
-
-    Accepts either `states` with shared `questions`/`preset`, or `items` where each
-    state can override its questions and model. Laya's public API predicts one state
-    at a time (its internals can batch, but the public `Agent.predict` cannot), so
-    this loops. Per-state errors are isolated and returned inline.
-    """
-    if request.items:
-        jobs = [
-            (
-                item.state,
-                _resolve(item.questions or request.questions, request.preset),
-                item.model or request.model,
-            )
-            for item in request.items
-        ]
-    else:
-        questions = _resolve(request.questions, request.preset)
-        jobs = [(state, questions, request.model) for state in request.states or []]
-
-    if len(jobs) > MAX_BULK_ITEMS:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Too many states: {len(jobs)} > MAX_BULK_ITEMS={MAX_BULK_ITEMS}",
+        result = router.predict(
+            request.state,
+            _dump(request.questions),
+            model=_TYPESAFE_MODELS[request.model],
         )
-
-    router = _router()
-    results: list[BulkItemResult] = []
-    with _lock:
-        for state, questions, model in jobs:
-            try:
-                results.append(
-                    BulkItemResult(
-                        ok=True,
-                        result=PredictResponse.model_validate(
-                            router.predict(state, questions, model=model)
-                        ),
-                    )
-                )
-            except Exception as exc:  # noqa: BLE001 - report per-item failure
-                results.append(BulkItemResult(ok=False, error=str(exc)))
-    return BulkPredictResponse(count=len(results), results=results)
+    validated = PredictResponse.model_validate(result)
+    return TypeSafeResponse(
+        model=request.model,
+        answers=validated.answers,
+        usage=validated.usage,
+    )
 
 
 # ------------------------------------------------------------------------ openapi
