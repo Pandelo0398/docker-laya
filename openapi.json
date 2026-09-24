@@ -373,17 +373,17 @@
     "/v1/systemone": {
       "post": {
         "tags": [
-          "typesafe",
+          "systemone",
           "predict"
         ],
-        "summary": "TypeSafe-compatible prediction",
-        "description": "Evaluate a TypeSafe-shaped request using a Laya checkpoint.",
-        "operationId": "typesafe_predict_v1_systemone_post",
+        "summary": "SystemOne / TypeSafe-compatible prediction",
+        "description": "Evaluate a SystemOne / TypeSafe-shaped request using a Laya checkpoint.",
+        "operationId": "systemone_predict_v1_systemone_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TypeSafeRequest"
+                "$ref": "#/components/schemas/SystemOneRequest"
               }
             }
           },
@@ -395,7 +395,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/TypeSafeResponse"
+                  "$ref": "#/components/schemas/SystemOneResponse"
                 }
               }
             }
@@ -785,7 +785,19 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions",
             "description": "What to decide, phrased as a question."
           },
@@ -1010,7 +1022,19 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions"
           },
           "criteria": {
@@ -1302,7 +1326,19 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions"
           },
           "criteria": {
@@ -1330,7 +1366,7 @@
         "title": "ScoreQuestion",
         "description": "Rate on an ordered scale, e.g. urgency."
       },
-      "TypeSafeChoiceAnswer": {
+      "SystemOneChoiceAnswer": {
         "properties": {
           "type": {
             "type": "string",
@@ -1360,63 +1396,9 @@
           "probabilities",
           "confidence"
         ],
-        "title": "TypeSafeChoiceAnswer"
+        "title": "SystemOneChoiceAnswer"
       },
-      "TypeSafeChoiceQuestion": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "choice",
-            "title": "Type"
-          },
-          "instructions": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              }
-            ],
-            "title": "Instructions"
-          },
-          "criteria": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                {
-                  "items": {},
-                  "type": "array"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "type": "object",
-            "title": "Criteria"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "instructions",
-          "criteria"
-        ],
-        "title": "TypeSafeChoiceQuestion"
-      },
-      "TypeSafeNoulAnswer": {
+      "SystemOneNoulAnswer": {
         "properties": {
           "type": {
             "type": "string",
@@ -1433,69 +1415,9 @@
           "type",
           "noul"
         ],
-        "title": "TypeSafeNoulAnswer"
+        "title": "SystemOneNoulAnswer"
       },
-      "TypeSafeNoulQuestion": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "noul",
-            "title": "Type"
-          },
-          "instructions": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              }
-            ],
-            "title": "Instructions"
-          },
-          "criteria": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "additionalProperties": true,
-                      "type": "object"
-                    },
-                    {
-                      "items": {},
-                      "type": "array"
-                    },
-                    {
-                      "type": "null"
-                    }
-                  ]
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Criteria"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "instructions"
-        ],
-        "title": "TypeSafeNoulQuestion"
-      },
-      "TypeSafeRequest": {
+      "SystemOneRequest": {
         "properties": {
           "state": {
             "anyOf": [
@@ -1526,21 +1448,21 @@
             "additionalProperties": {
               "oneOf": [
                 {
-                  "$ref": "#/components/schemas/TypeSafeChoiceQuestion"
+                  "$ref": "#/components/schemas/ChoiceQuestion"
                 },
                 {
-                  "$ref": "#/components/schemas/TypeSafeScoreQuestion"
+                  "$ref": "#/components/schemas/ScoreQuestion"
                 },
                 {
-                  "$ref": "#/components/schemas/TypeSafeNoulQuestion"
+                  "$ref": "#/components/schemas/NoulQuestion"
                 }
               ],
               "discriminator": {
                 "propertyName": "type",
                 "mapping": {
-                  "choice": "#/components/schemas/TypeSafeChoiceQuestion",
-                  "noul": "#/components/schemas/TypeSafeNoulQuestion",
-                  "score": "#/components/schemas/TypeSafeScoreQuestion"
+                  "choice": "#/components/schemas/ChoiceQuestion",
+                  "noul": "#/components/schemas/NoulQuestion",
+                  "score": "#/components/schemas/ScoreQuestion"
                 }
               }
             },
@@ -1554,9 +1476,9 @@
           "model",
           "questions"
         ],
-        "title": "TypeSafeRequest"
+        "title": "SystemOneRequest"
       },
-      "TypeSafeResponse": {
+      "SystemOneResponse": {
         "properties": {
           "model": {
             "type": "string",
@@ -1566,21 +1488,21 @@
             "additionalProperties": {
               "oneOf": [
                 {
-                  "$ref": "#/components/schemas/TypeSafeNoulAnswer"
+                  "$ref": "#/components/schemas/SystemOneNoulAnswer"
                 },
                 {
-                  "$ref": "#/components/schemas/TypeSafeChoiceAnswer"
+                  "$ref": "#/components/schemas/SystemOneChoiceAnswer"
                 },
                 {
-                  "$ref": "#/components/schemas/TypeSafeScoreAnswer"
+                  "$ref": "#/components/schemas/SystemOneScoreAnswer"
                 }
               ],
               "discriminator": {
                 "propertyName": "type",
                 "mapping": {
-                  "choice": "#/components/schemas/TypeSafeChoiceAnswer",
-                  "noul": "#/components/schemas/TypeSafeNoulAnswer",
-                  "score": "#/components/schemas/TypeSafeScoreAnswer"
+                  "choice": "#/components/schemas/SystemOneChoiceAnswer",
+                  "noul": "#/components/schemas/SystemOneNoulAnswer",
+                  "score": "#/components/schemas/SystemOneScoreAnswer"
                 }
               }
             },
@@ -1588,7 +1510,7 @@
             "title": "Answers"
           },
           "usage": {
-            "$ref": "#/components/schemas/TypeSafeUsage"
+            "$ref": "#/components/schemas/Usage"
           }
         },
         "type": "object",
@@ -1597,9 +1519,9 @@
           "answers",
           "usage"
         ],
-        "title": "TypeSafeResponse"
+        "title": "SystemOneResponse"
       },
-      "TypeSafeScoreAnswer": {
+      "SystemOneScoreAnswer": {
         "properties": {
           "type": {
             "type": "string",
@@ -1637,76 +1559,7 @@
           "probabilities",
           "confidence"
         ],
-        "title": "TypeSafeScoreAnswer"
-      },
-      "TypeSafeScoreQuestion": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "score",
-            "title": "Type"
-          },
-          "instructions": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "items": {},
-                "type": "array"
-              }
-            ],
-            "title": "Instructions"
-          },
-          "criteria": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                {
-                  "items": {},
-                  "type": "array"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Criteria"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "instructions",
-          "criteria"
-        ],
-        "title": "TypeSafeScoreQuestion"
-      },
-      "TypeSafeUsage": {
-        "properties": {
-          "input_tokens": {
-            "type": "integer",
-            "title": "Input Tokens"
-          },
-          "output_tokens": {
-            "type": "integer",
-            "title": "Output Tokens"
-          }
-        },
-        "type": "object",
-        "required": [
-          "input_tokens",
-          "output_tokens"
-        ],
-        "title": "TypeSafeUsage"
+        "title": "SystemOneScoreAnswer"
       },
       "Usage": {
         "properties": {

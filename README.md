@@ -93,7 +93,7 @@ curl http://localhost:8000/healthz
 | `POST` | `/email/state` | yes* | Clean + structure an email as a state |
 | `POST` | `/predict` | yes* | Typed questions over one state |
 | `POST` | `/predict/bulk` | yes* | Same questions over many states |
-| `POST` | `/v1/systemone` | yes* | TypeSafe-compatible typed prediction |
+| `POST` | `/v1/systemone` | yes* | SystemOne / TypeSafe compatible prediction |
 
 \* Enforced only when `API_KEYS` and/or `BASIC_AUTH` is set. Any of these works:
 
@@ -150,7 +150,7 @@ with per-state errors isolated as `{"ok": false, "error": "..."}`.
 
 ---
 
-### TypeSafe Compatible Prediction (`POST /v1/systemone`)
+### SystemOne / TypeSafe Compatible Prediction (`POST /v1/systemone`)
 
 ```bash
 curl -X POST localhost:8000/v1/systemone -H 'Authorization: Bearer key1' -H 'Content-Type: application/json' -d '{

@@ -37,7 +37,7 @@ DEVICE = os.environ.get("DEVICE", "cpu")
 
 AVAILABLE_MODELS = ("english", "multilingual", "typed-decisions")
 ModelName = Literal["english", "multilingual", "typed-decisions"]
-TypeSafeModelName = Literal[
+SystemOneModelName = Literal[
     "laya-english",
     "laya-multilingual",
     "laya-typed-decisions",
@@ -86,6 +86,7 @@ app = FastAPI(
 )
 
 State = str | dict[str, Any] | list[Any]
+InstructionValue = str | dict[str, Any] | list[Any]
 CriteriaValue = Any  # str, number, bool, list or dict; rendered as compact JSON
 
 PresetName = Literal["triage", "email", "guard", "moderation", "router"]
@@ -121,7 +122,9 @@ class ChoiceQuestion(BaseModel):
     """Pick one labelled option, e.g. a routing department."""
 
     type: Literal["choice"]
-    instructions: str = Field(..., description="What to decide, phrased as a question.")
+    instructions: InstructionValue = Field(
+        ..., description="What to decide, phrased as a question."
+    )
     criteria: dict[str, CriteriaValue] | list[CriteriaValue] | None = Field(
         default=None,
         description=(
@@ -136,7 +139,7 @@ class ScoreQuestion(BaseModel):
     """Rate on an ordered scale, e.g. urgency."""
 
     type: Literal["score"]
-    instructions: str
+    instructions: InstructionValue
     criteria: list[CriteriaValue] = Field(
         ...,
         description="Ordered levels, lowest first. Each may be any JSON value.",
@@ -148,7 +151,7 @@ class NoulQuestion(BaseModel):
     """Yes/no decision without a learned neutral class (n-o-u-l)."""
 
     type: Literal["noul"]
-    instructions: str
+    instructions: InstructionValue
     criteria: dict[str, CriteriaValue] | None = Field(
         default=None,
         description="Optional `false`/`true` descriptions (any JSON value).",
@@ -333,52 +336,19 @@ class PredictResponse(BaseModel):
     )
 
 
-TypeSafeInstruction = str | dict[str, Any] | list[Any]
-
-
-class TypeSafeChoiceQuestion(BaseModel):
-    type: Literal["choice"]
-    instructions: TypeSafeInstruction
-    criteria: dict[str, str | dict[str, Any] | list[Any] | None]
-
-
-class TypeSafeScoreQuestion(BaseModel):
-    type: Literal["score"]
-    instructions: TypeSafeInstruction
-    criteria: list[str | dict[str, Any] | list[Any]]
-
-
-class TypeSafeNoulQuestion(BaseModel):
-    type: Literal["noul"]
-    instructions: TypeSafeInstruction
-    criteria: dict[str, str | dict[str, Any] | list[Any] | None] | None = None
-
-
-TypeSafeQuestion = Annotated[
-    TypeSafeChoiceQuestion | TypeSafeScoreQuestion | TypeSafeNoulQuestion,
-    Field(discriminator="type"),
-]
-
-
-class TypeSafeRequest(BaseModel):
-    state: State
-    model: TypeSafeModelName
-    questions: dict[str, TypeSafeQuestion]
-
-
-class TypeSafeNoulAnswer(BaseModel):
+class SystemOneNoulAnswer(BaseModel):
     type: Literal["noul"]
     noul: float
 
 
-class TypeSafeChoiceAnswer(BaseModel):
+class SystemOneChoiceAnswer(BaseModel):
     type: Literal["choice"]
     choice: str
     probabilities: dict[str, float]
     confidence: float
 
 
-class TypeSafeScoreAnswer(BaseModel):
+class SystemOneScoreAnswer(BaseModel):
     type: Literal["score"]
     score: float
     legend: dict[str, str]
@@ -386,21 +356,22 @@ class TypeSafeScoreAnswer(BaseModel):
     confidence: float
 
 
-TypeSafeAnswer = Annotated[
-    TypeSafeNoulAnswer | TypeSafeChoiceAnswer | TypeSafeScoreAnswer,
+SystemOneAnswer = Annotated[
+    SystemOneNoulAnswer | SystemOneChoiceAnswer | SystemOneScoreAnswer,
     Field(discriminator="type"),
 ]
 
 
-class TypeSafeUsage(BaseModel):
-    input_tokens: int
-    output_tokens: int
+class SystemOneRequest(BaseModel):
+    state: State
+    model: SystemOneModelName
+    questions: dict[str, Question]
 
 
-class TypeSafeResponse(BaseModel):
+class SystemOneResponse(BaseModel):
     model: str
-    answers: dict[str, TypeSafeAnswer]
-    usage: TypeSafeUsage
+    answers: dict[str, SystemOneAnswer]
+    usage: Usage
 
 
 class BulkItemResult(BaseModel):
@@ -505,7 +476,7 @@ def _resolve(
     return _dump(questions or {})
 
 
-_TYPESAFE_MODELS: dict[TypeSafeModelName, ModelName] = {
+_SYSTEMONE_MODELS: dict[SystemOneModelName, ModelName] = {
     "laya-english": "english",
     "laya-multilingual": "multilingual",
     "laya-typed-decisions": "typed-decisions",
@@ -663,26 +634,26 @@ def predict_bulk(request: BulkPredictRequest) -> BulkPredictResponse:
 
 @app.post(
     "/v1/systemone",
-    tags=["typesafe", "predict"],
-    response_model=TypeSafeResponse,
-    summary="TypeSafe-compatible prediction",
+    tags=["systemone", "predict"],
+    response_model=SystemOneResponse,
+    summary="SystemOne / TypeSafe-compatible prediction",
     dependencies=[Depends(require_auth)],
     responses=_AUTH_RESPONSES,
 )
-def typesafe_predict(request: TypeSafeRequest) -> TypeSafeResponse:
-    """Evaluate a TypeSafe-shaped request using a Laya checkpoint."""
+def systemone_predict(request: SystemOneRequest) -> SystemOneResponse:
+    """Evaluate a SystemOne / TypeSafe-shaped request using a Laya checkpoint."""
     router = _router()
     with _lock:
         result = router.predict(
             request.state,
             _dump(request.questions),
-            model=_TYPESAFE_MODELS[request.model],
+            model=_SYSTEMONE_MODELS[request.model],
         )
     validated = PredictResponse.model_validate(result)
-    return TypeSafeResponse(
+    return SystemOneResponse(
         model=request.model,
         answers={key: answer.model_dump() for key, answer in validated.answers.items()},
-        usage=TypeSafeUsage.model_validate(validated.usage.model_dump()),
+        usage=validated.usage,
     )
 
 
