@@ -1433,16 +1433,13 @@
                 "type": "array"
               }
             ],
-            "title": "State"
+            "title": "State",
+            "description": "The content to evaluate: a string, dict, or list."
           },
           "model": {
             "type": "string",
-            "enum": [
-              "laya-english",
-              "laya-multilingual",
-              "laya-typed-decisions"
-            ],
-            "title": "Model"
+            "title": "Model",
+            "description": "System One model ID, e.g. laya-english, laya-multilingual, typed-decisions."
           },
           "questions": {
             "additionalProperties": {
@@ -1467,7 +1464,32 @@
               }
             },
             "type": "object",
-            "title": "Questions"
+            "title": "Questions",
+            "description": "Typed questions map."
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Optional session identifier."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "Optional user identifier."
           }
         },
         "type": "object",
@@ -1480,9 +1502,18 @@
       },
       "SystemOneResponse": {
         "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
           "model": {
             "type": "string",
             "title": "Model"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": "Laya"
           },
           "answers": {
             "additionalProperties": {
@@ -1513,6 +1544,7 @@
             "$ref": "#/components/schemas/Usage"
           }
         },
+        "additionalProperties": true,
         "type": "object",
         "required": [
           "model",

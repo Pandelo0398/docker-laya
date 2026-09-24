@@ -363,13 +363,24 @@ SystemOneAnswer = Annotated[
 
 
 class SystemOneRequest(BaseModel):
-    state: State
-    model: SystemOneModelName
-    questions: dict[str, Question]
+    model_config = ConfigDict(extra="ignore")
+
+    state: State = Field(..., description="The content to evaluate: a string, dict, or list.")
+    model: str = Field(
+        ...,
+        description="System One model ID, e.g. laya-english, laya-multilingual, typed-decisions.",
+    )
+    questions: dict[str, Question] = Field(..., description="Typed questions map.")
+    session_id: str | None = Field(default=None, description="Optional session identifier.")
+    user: str | None = Field(default=None, description="Optional user identifier.")
 
 
 class SystemOneResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: str = Field(default_factory=lambda: f"gen-laya-{secrets.token_hex(12)}")
     model: str
+    provider: str = "Laya"
     answers: dict[str, SystemOneAnswer]
     usage: Usage
 
@@ -476,11 +487,29 @@ def _resolve(
     return _dump(questions or {})
 
 
-_SYSTEMONE_MODELS: dict[SystemOneModelName, ModelName] = {
+_SYSTEMONE_MODELS: dict[str, ModelName] = {
+    "english": "english",
     "laya-english": "english",
+    "multilingual": "multilingual",
     "laya-multilingual": "multilingual",
+    "typed-decisions": "typed-decisions",
     "laya-typed-decisions": "typed-decisions",
 }
+
+
+def _resolve_systemone_model(model_name: str) -> ModelName:
+    name = model_name.lower().strip()
+    if name.startswith("typesafe/"):
+        name = name.removeprefix("typesafe/")
+    if name.startswith("laya/"):
+        name = name.removeprefix("laya/")
+    if name in _SYSTEMONE_MODELS:
+        return _SYSTEMONE_MODELS[name]
+    if "multi" in name:
+        return "multilingual"
+    if "decision" in name:
+        return "typed-decisions"
+    return "english"
 
 
 _AUTH_RESPONSES: dict[int | str, dict[str, Any]] = {
@@ -640,14 +669,22 @@ def predict_bulk(request: BulkPredictRequest) -> BulkPredictResponse:
     dependencies=[Depends(require_auth)],
     responses=_AUTH_RESPONSES,
 )
+@app.post(
+    "/systemone",
+    include_in_schema=False,
+    response_model=SystemOneResponse,
+    dependencies=[Depends(require_auth)],
+    responses=_AUTH_RESPONSES,
+)
 def systemone_predict(request: SystemOneRequest) -> SystemOneResponse:
     """Evaluate a SystemOne / TypeSafe-shaped request using a Laya checkpoint."""
     router = _router()
+    model = _resolve_systemone_model(request.model)
     with _lock:
         result = router.predict(
             request.state,
             _dump(request.questions),
-            model=_SYSTEMONE_MODELS[request.model],
+            model=model,
         )
     validated = PredictResponse.model_validate(result)
     return SystemOneResponse(
