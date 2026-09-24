@@ -39,7 +39,7 @@ build:
 	docker build -t laya-api:latest .
 
 build-model:
-	docker build --build-arg PRELOAD_MODEL=1 --build-arg MODELS=$(MODEL) -t laya-server:$(MODEL) .
+	docker build --build-arg PRELOAD_MODEL=1 --build-arg MODELS=$(MODEL) -t laya-api:$(MODEL) .
 
 logs:
 	docker compose logs -f

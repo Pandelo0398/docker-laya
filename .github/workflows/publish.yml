@@ -32,7 +32,7 @@ jobs:
 
       - name: Validate OpenAPI schema
         run: |
-          uv run --no-project --with 'fastapi>=0.115' --with 'pydantic>=2' python -c "import sys; sys.path.insert(0, '.'); from app.main import app; s = app.openapi(); assert '/v1/systemone' in s['paths'] and '/predict' not in s['paths']; print('openapi ok:', list(s['paths']))"
+          uv run --no-project --with 'fastapi>=0.115' --with 'pydantic>=2' python -c "import sys; sys.path.insert(0, '.'); from app.main import app; s = app.openapi(); assert '/v1/systemone' in s['paths'] and '/predict' in s['paths']; print('openapi ok:', list(s['paths']))"
 
   # Pull requests: build the image once and check it boots.
   test:
@@ -54,7 +54,7 @@ jobs:
 
       - name: Container smoke test
         run: |
-          docker run --rm --entrypoint python laya-api:test -c "from app.main import app; s = app.openapi(); assert '/v1/systemone' in s['paths']; print('container ok')"
+          docker run --rm --entrypoint python laya-api:test -c "from app.main import app; s = app.openapi(); assert '/v1/systemone' in s['paths'] and '/predict' in s['paths']; print('container ok')"
 
   # Nightly / manual / release: real model download + inference.
   smoke:

@@ -6,7 +6,7 @@
 Dockerized [Laya](https://huggingface.co/convaiinnovations/laya) prediction
 service: loads one or more checkpoints behind a router, then serves typed
 decisions (choice / score / noul) over HTTP, auto-routed by language or pinned
-with `model`.
+with `model`. Also supports TypeSafe API compatibility via `/v1/systemone`.
 
 Built and published for `linux/amd64` and `linux/arm64`.
 
@@ -18,10 +18,18 @@ Built and published for `linux/amd64` and `linux/arm64`.
   `typed-decisions`, auto-selected by language or pinned per request.
 - 🎯 **Typed Decisions**: `choice` / `score` / `noul` questions with calibrated
   probabilities, confidence and action probability.
+- 🤝 **TypeSafe API Compatibility**: drop-in `/v1/systemone` endpoint compatible
+  with TypeSafe request/response schemas.
 - 🔐 **Timing-Safe Auth**: API keys (`X-API-Key` / `Authorization: Bearer`) and
   HTTP Basic, compared in constant time.
 - 📑 **Interactive OpenAPI Docs**: Swagger UI (`/docs`), ReDoc (`/redoc`) and the
   raw schema at `/openapi.json`.
+- 🧰 **Built-in Presets**: ready-made question sets (`triage`, `email`, `guard`,
+  `moderation`, `router`).
+- 📦 **Bulk Inference**: `/predict/bulk` over many states, with per-state
+  questions/model and isolated errors.
+- 🔎 **Detection & Email Helpers**: `/detect` (script/language) and
+  `/email/state` (clean + structure an email).
 - 🧩 **Flexible State**: string, JSON object, or conversation turns; criteria
   values may be any JSON (dicts/lists/numbers are rendered as compact JSON).
 - 🛡️ **Non-Root**: runs as unprivileged `appuser` (uid `10001`).
@@ -42,24 +50,11 @@ docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/
 ```
 
 First start downloads the checkpoint (~1 GB) into the `hf-cache` volume. Bake it
-into the image for instant/offline startup with `PRELOAD_MODEL=1`; published
-model images include the complete cache and run with Hugging Face offline mode.
+into the image for instant/offline startup with `PRELOAD_MODEL=1`:
 
-To publish one architecture-specific image per model to Docker Hub:
-
-```sh
-for model in english multilingual typed-decisions; do
-  for arch in amd64 arm64; do
-    docker buildx build --platform linux/$arch --push \
-      --build-arg PRELOAD_MODEL=1 --build-arg MODELS=$model \
-      -t auenkr/laya-server:laya-$model-$arch .
-  done
-done
+```bash
+make build-model MODEL=english
 ```
-
-This publishes six tags: `laya-english-amd64`, `laya-english-arm64`,
-`laya-multilingual-amd64`, `laya-multilingual-arm64`,
-`laya-typed-decisions-amd64`, and `laya-typed-decisions-arm64`.
 
 ### Check Health
 
@@ -81,6 +76,12 @@ curl http://localhost:8000/healthz
 | Method | Path | Auth | Description |
 | --- | --- | --- | --- |
 | `GET` | `/healthz` | no | Liveness + resident models |
+| `GET` | `/models` | yes* | Available and loaded checkpoints |
+| `GET` | `/presets` | yes* | Built-in question sets |
+| `POST` | `/detect` | yes* | Script/language detection (what routing uses) |
+| `POST` | `/email/state` | yes* | Clean + structure an email as a state |
+| `POST` | `/predict` | yes* | Typed questions over one state |
+| `POST` | `/predict/bulk` | yes* | Same questions over many states |
 | `POST` | `/v1/systemone` | yes* | TypeSafe-compatible typed prediction |
 
 \* Enforced only when `API_KEYS` and/or `BASIC_AUTH` is set. Any of these works:
@@ -93,7 +94,52 @@ curl http://localhost:8000/healthz
 
 ---
 
-## 🧠 TypeSafe Prediction
+## 🧠 Predicting
+
+### Standard Prediction (`POST /predict`)
+
+```bash
+curl -X POST localhost:8000/predict -H 'X-API-Key: key1' -H 'Content-Type: application/json' -d '{
+  "state": "I was billed twice. Please refund the duplicate today.",
+  "questions": {
+    "department": {"type": "choice", "instructions": "Which team?", "criteria": {"billing": "refunds", "technical": "bugs", "sales": "purchases"}},
+    "urgency":    {"type": "score",  "instructions": "How urgent?", "criteria": ["not urgent", "soon", "critical"]},
+    "refund":     {"type": "noul",   "instructions": "Does the customer ask for money back?"}
+  }
+}'
+```
+
+```json
+{
+  "model": "laya-rl-agent",
+  "answers": {
+    "department": {"type": "choice", "choice": "billing", "probabilities": {"billing": 0.96, "technical": 0.02, "sales": 0.02}, "confidence": 0.82},
+    "urgency":    {"type": "score", "score": 1.36, "legend": {"0": "not urgent", "1": "soon", "2": "critical"}, "confidence": 0.09},
+    "refund":     {"type": "noul", "noul": 0.82, "confidence": 0.82}
+  },
+  "usage": {"input_tokens": 132, "output_tokens": 0},
+  "routing": {"model": "english", "reason": "English Latin text"}
+}
+```
+
+`state` accepts a string, JSON object, or list of conversation turns. Criteria
+values may be strings or any JSON value (dicts/lists/numbers are rendered as
+compact JSON), and `noul` accepts optional `{"true": ..., "false": ...}` text.
+
+**Routing** — omit `model` to auto-select by language (see `/detect`), or pin
+`"model": "english" | "multilingual" | "typed-decisions"`. The response includes
+`routing` with the chosen checkpoint and reason.
+
+**Presets** — skip `questions` and pass `"preset": "triage"` (one of `triage`,
+`email`, `guard`, `moderation`, `router`); list them at `GET /presets`.
+
+**Bulk** — use `states` with shared `questions`/`preset`/`model`, or `items` to
+override questions and model per state. Returns `{"count": N, "results": [...]}`
+with per-state errors isolated as `{"ok": false, "error": "..."}`.
+
+---
+
+### TypeSafe Compatible Prediction (`POST /v1/systemone`)
 
 ```bash
 curl -X POST localhost:8000/v1/systemone -H 'Authorization: Bearer key1' -H 'Content-Type: application/json' -d '{
@@ -119,21 +165,8 @@ curl -X POST localhost:8000/v1/systemone -H 'Authorization: Bearer key1' -H 'Con
 }
 ```
 
-`state` accepts a string, JSON object, or list of conversation turns. Criteria
-values may be strings or any JSON value (dicts/lists/numbers are rendered as
-compact JSON), and `noul` accepts optional `{"true": ..., "false": ...}` text.
-
-### TypeSafe API Compatibility
-
-`POST /v1/systemone` accepts the TypeSafe API request shape and supports these
-Laya model names:
-
-```text
-laya-english | laya-multilingual | laya-typed-decisions
-```
-
-It uses `Authorization: Bearer <API_KEY>` and returns the documented TypeSafe
-`model`, `answers`, and `usage` fields.
+Supported model names for TypeSafe requests:
+`laya-english`, `laya-multilingual`, `laya-typed-decisions`.
 
 ---
 
@@ -143,6 +176,7 @@ It uses `Authorization: Bearer <API_KEY>` and returns the documented TypeSafe
 | --- | --- | --- |
 | `API_KEYS` | *(empty)* | Comma-separated keys; empty disables API-key auth. |
 | `BASIC_AUTH` | *(empty)* | Comma-separated `user:password` pairs. |
+| `MAX_BULK_ITEMS` | `256` | Max states per `/predict/bulk`. |
 | `PORT` | `8000` | HTTP port (host and container). |
 | `MODELS` | `english` | Checkpoints to preload: `english`, `multilingual`, `typed-decisions`. |
 | `MODEL_ID` | `convaiinnovations/laya` | Optional repo override (mirror/local path). |
