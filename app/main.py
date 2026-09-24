@@ -558,8 +558,8 @@ def typesafe_predict(request: TypeSafeRequest) -> TypeSafeResponse:
     validated = PredictResponse.model_validate(result)
     return TypeSafeResponse(
         model=request.model,
-        answers=validated.answers,
-        usage=validated.usage,
+        answers={key: answer.model_dump() for key, answer in validated.answers.items()},
+        usage=validated.usage.model_dump(),
     )
 
 
