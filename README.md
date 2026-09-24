@@ -6,7 +6,7 @@
 Dockerized [Laya](https://huggingface.co/convaiinnovations/laya) prediction
 service: loads one or more checkpoints behind a router, then serves typed
 decisions (choice / score / noul) over HTTP, auto-routed by language or pinned
-with `model`.
+with `model`. Also supports TypeSafe API compatibility via `/v1/systemone`.
 
 Built and published for `linux/amd64` and `linux/arm64`.
 
@@ -18,6 +18,8 @@ Built and published for `linux/amd64` and `linux/arm64`.
   `typed-decisions`, auto-selected by language or pinned per request.
 - 🎯 **Typed Decisions**: `choice` / `score` / `noul` questions with calibrated
   probabilities, confidence and action probability.
+- 🤝 **TypeSafe API Compatibility**: drop-in `/v1/systemone` endpoint compatible
+  with TypeSafe request/response schemas.
 - 🔐 **Timing-Safe Auth**: API keys (`X-API-Key` / `Authorization: Bearer`) and
   HTTP Basic, compared in constant time.
 - 📑 **Interactive OpenAPI Docs**: Swagger UI (`/docs`), ReDoc (`/redoc`) and the
@@ -47,8 +49,23 @@ docker pull ghcr.io/chneau/laya
 docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/laya
 ```
 
-First start downloads the checkpoint (~1 GB) into the `hf-cache` volume. Bake it
-into the image for instant/offline startup with `PRELOAD_MODEL=1`.
+### 🏷️ Docker Image Tags & Model Variants
+
+Multi-architecture images (`linux/amd64` and `linux/arm64`) are published to GitHub Container Registry under several tags:
+
+| Image Tag | Preloaded Models | Image Size | Description |
+| :--- | :--- | :--- | :--- |
+| `ghcr.io/chneau/laya:latest` (or `v0.6.0`) | None (Dynamic) | ~300 MB | **Slim / Default**: Small image size. Downloads model on first run into `/data/hf`. |
+| `ghcr.io/chneau/laya:english` | `english` | ~1.3 GB | **Instant Startup (English)**: Pre-baked English checkpoint, offline-ready. |
+| `ghcr.io/chneau/laya:multilingual` | `multilingual` | ~1.8 GB | **Instant Startup (Multilingual)**: Pre-baked multilingual checkpoint. |
+| `ghcr.io/chneau/laya:typed-decisions` | `typed-decisions` | ~1.3 GB | **Instant Startup (Typed Decisions)**: Pre-baked typed decisions checkpoint. |
+| `ghcr.io/chneau/laya:all` | All 3 models | ~3.5 GB | **Full Bundle**: All checkpoints pre-baked for zero-latency multi-model routing. |
+
+#### Running a Pre-baked Image (Instant Startup & Air-gapped / Offline)
+
+```bash
+docker run -d -p 8000:8000 -e API_KEYS=key1 ghcr.io/chneau/laya:english
+```
 
 ### Check Health
 
@@ -76,6 +93,7 @@ curl http://localhost:8000/healthz
 | `POST` | `/email/state` | yes* | Clean + structure an email as a state |
 | `POST` | `/predict` | yes* | Typed questions over one state |
 | `POST` | `/predict/bulk` | yes* | Same questions over many states |
+| `POST` | `/v1/systemone` | yes* | SystemOne / TypeSafe compatible prediction |
 
 \* Enforced only when `API_KEYS` and/or `BASIC_AUTH` is set. Any of these works:
 
@@ -88,6 +106,8 @@ curl http://localhost:8000/healthz
 ---
 
 ## 🧠 Predicting
+
+### Standard Prediction (`POST /predict`)
 
 ```bash
 curl -X POST localhost:8000/predict -H 'X-API-Key: key1' -H 'Content-Type: application/json' -d '{
@@ -130,13 +150,44 @@ with per-state errors isolated as `{"ok": false, "error": "..."}`.
 
 ---
 
+### SystemOne / TypeSafe Compatible Prediction (`POST /v1/systemone`)
+
+```bash
+curl -X POST localhost:8000/v1/systemone -H 'Authorization: Bearer key1' -H 'Content-Type: application/json' -d '{
+  "state": "I was billed twice. Please refund the duplicate today.",
+  "model": "laya-english",
+  "questions": {
+    "department": {"type": "choice", "instructions": "Which team?", "criteria": {"billing": "refunds", "technical": "bugs", "sales": "purchases"}},
+    "urgency":    {"type": "score",  "instructions": "How urgent?", "criteria": ["not urgent", "soon", "critical"]},
+    "refund":     {"type": "noul",   "instructions": "Does the customer ask for money back?"}
+  }
+}'
+```
+
+```json
+{
+  "model": "laya-english",
+  "answers": {
+    "department": {"type": "choice", "choice": "billing", "probabilities": {"billing": 0.96, "technical": 0.02, "sales": 0.02}, "confidence": 0.82},
+    "urgency":    {"type": "score", "score": 1.36, "legend": {"0": "not urgent", "1": "soon", "2": "critical"}, "confidence": 0.09},
+    "refund":     {"type": "noul", "noul": 0.82}
+  },
+  "usage": {"input_tokens": 132, "output_tokens": 0}
+}
+```
+
+Supported model names for TypeSafe requests:
+`laya-english`, `laya-multilingual`, `laya-typed-decisions`.
+
+---
+
 ## ⚙️ Configuration & Environment Variables
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `API_KEYS` | *(empty)* | Comma-separated keys; empty disables API-key auth. |
 | `BASIC_AUTH` | *(empty)* | Comma-separated `user:password` pairs. |
-| `MAX_BULK_ITEMS` | `256` | Max states per `/predict/bulk`. |
+| `MAX_BULK_ITEMS` | *(empty / unlimited)* | Optional limit on states per `/predict/bulk` (unlimited by default). |
 | `PORT` | `8000` | HTTP port (host and container). |
 | `MODELS` | `english` | Checkpoints to preload: `english`, `multilingual`, `typed-decisions`. |
 | `MODEL_ID` | `convaiinnovations/laya` | Optional repo override (mirror/local path). |

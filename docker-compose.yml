@@ -12,7 +12,7 @@ services:
       PORT: ${PORT:-8000}
       API_KEYS: ${API_KEYS:-change-me}
       BASIC_AUTH: ${BASIC_AUTH:-}
-      MAX_BULK_ITEMS: ${MAX_BULK_ITEMS:-256}
+      MAX_BULK_ITEMS: ${MAX_BULK_ITEMS:-}
       MODELS: ${MODELS:-english}
       MODEL_ID: ${MODEL_ID:-convaiinnovations/laya}
       MODEL_SUBFOLDER: ${MODEL_SUBFOLDER:-}

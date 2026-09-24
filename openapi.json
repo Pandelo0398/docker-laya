@@ -3,7 +3,7 @@
   "info": {
     "title": "Laya API",
     "description": "Run Laya typed decisions (choice / score / noul) over text, JSON objects or conversation turns, using your own questions or a built-in preset. Requests are auto-routed to the best checkpoint, or pinned with `model`.\n\nAuthenticate with an API key (`X-API-Key` or `Authorization: Bearer`) or HTTP Basic, whichever is configured on the server.",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "paths": {
     "/healthz": {
@@ -336,6 +336,66 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BulkPredictResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials"
+          },
+          "503": {
+            "description": "Model not loaded yet"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "BearerAuth": []
+          },
+          {
+            "BasicAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/systemone": {
+      "post": {
+        "tags": [
+          "systemone",
+          "predict"
+        ],
+        "summary": "SystemOne / TypeSafe-compatible prediction",
+        "description": "Evaluate a SystemOne / TypeSafe-shaped request using a Laya checkpoint.",
+        "operationId": "systemone_predict_v1_systemone_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SystemOneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemOneResponse"
                 }
               }
             }
@@ -725,7 +785,19 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions",
             "description": "What to decide, phrased as a question."
           },
@@ -950,7 +1022,19 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions"
           },
           "criteria": {
@@ -1242,7 +1326,19 @@
             "title": "Type"
           },
           "instructions": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
             "title": "Instructions"
           },
           "criteria": {
@@ -1269,6 +1365,233 @@
         ],
         "title": "ScoreQuestion",
         "description": "Rate on an ordered scale, e.g. urgency."
+      },
+      "SystemOneChoiceAnswer": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "choice",
+            "title": "Type"
+          },
+          "choice": {
+            "type": "string",
+            "title": "Choice"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probabilities"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "choice",
+          "probabilities",
+          "confidence"
+        ],
+        "title": "SystemOneChoiceAnswer"
+      },
+      "SystemOneNoulAnswer": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "noul",
+            "title": "Type"
+          },
+          "noul": {
+            "type": "number",
+            "title": "Noul"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "noul"
+        ],
+        "title": "SystemOneNoulAnswer"
+      },
+      "SystemOneRequest": {
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
+            "title": "State",
+            "description": "The content to evaluate: a string, dict, or list."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "System One model ID, e.g. laya-english, laya-multilingual, typed-decisions."
+          },
+          "questions": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ChoiceQuestion"
+                },
+                {
+                  "$ref": "#/components/schemas/ScoreQuestion"
+                },
+                {
+                  "$ref": "#/components/schemas/NoulQuestion"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "choice": "#/components/schemas/ChoiceQuestion",
+                  "noul": "#/components/schemas/NoulQuestion",
+                  "score": "#/components/schemas/ScoreQuestion"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Questions",
+            "description": "Typed questions map."
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id",
+            "description": "Optional session identifier."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "Optional user identifier."
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "model",
+          "questions"
+        ],
+        "title": "SystemOneRequest"
+      },
+      "SystemOneResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider",
+            "default": "Laya"
+          },
+          "answers": {
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SystemOneNoulAnswer"
+                },
+                {
+                  "$ref": "#/components/schemas/SystemOneChoiceAnswer"
+                },
+                {
+                  "$ref": "#/components/schemas/SystemOneScoreAnswer"
+                }
+              ],
+              "discriminator": {
+                "propertyName": "type",
+                "mapping": {
+                  "choice": "#/components/schemas/SystemOneChoiceAnswer",
+                  "noul": "#/components/schemas/SystemOneNoulAnswer",
+                  "score": "#/components/schemas/SystemOneScoreAnswer"
+                }
+              }
+            },
+            "type": "object",
+            "title": "Answers"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "model",
+          "answers",
+          "usage"
+        ],
+        "title": "SystemOneResponse"
+      },
+      "SystemOneScoreAnswer": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "score",
+            "title": "Type"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "legend": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Legend"
+          },
+          "probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Probabilities"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "score",
+          "legend",
+          "probabilities",
+          "confidence"
+        ],
+        "title": "SystemOneScoreAnswer"
       },
       "Usage": {
         "properties": {

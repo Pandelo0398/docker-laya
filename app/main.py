@@ -26,7 +26,8 @@ for _pair in os.environ.get("BASIC_AUTH", "").split(","):
         BASIC_AUTH.append((_user.strip(), _password.strip()))
 
 AUTH_ENABLED = bool(API_KEYS or BASIC_AUTH)
-MAX_BULK_ITEMS = int(os.environ.get("MAX_BULK_ITEMS", "256"))
+_max_bulk_env = os.environ.get("MAX_BULK_ITEMS", "").strip()
+MAX_BULK_ITEMS: int | None = int(_max_bulk_env) if _max_bulk_env and _max_bulk_env != "0" else None
 
 # Checkpoints to keep resident at startup (comma-separated).
 MODELS = [m.strip() for m in os.environ.get("MODELS", "english").split(",") if m.strip()]
@@ -37,6 +38,11 @@ DEVICE = os.environ.get("DEVICE", "cpu")
 
 AVAILABLE_MODELS = ("english", "multilingual", "typed-decisions")
 ModelName = Literal["english", "multilingual", "typed-decisions"]
+SystemOneModelName = Literal[
+    "laya-english",
+    "laya-multilingual",
+    "laya-typed-decisions",
+]
 
 _state: dict[str, Any] = {}
 _lock = threading.Lock()
@@ -65,7 +71,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Laya API",
-    version="0.5.0",
+    version="0.6.0",
     lifespan=lifespan,
     description=(
         "Run Laya typed decisions (choice / score / noul) over text, JSON objects "
@@ -81,9 +87,9 @@ app = FastAPI(
 )
 
 State = str | dict[str, Any] | list[Any]
+InstructionValue = str | dict[str, Any] | list[Any]
 CriteriaValue = Any  # str, number, bool, list or dict; rendered as compact JSON
 
-_PRESET_NAMES = ("triage", "email", "guard", "moderation", "router")
 PresetName = Literal["triage", "email", "guard", "moderation", "router"]
 
 _presets_cache: dict[str, dict[str, Any]] = {}
@@ -117,7 +123,9 @@ class ChoiceQuestion(BaseModel):
     """Pick one labelled option, e.g. a routing department."""
 
     type: Literal["choice"]
-    instructions: str = Field(..., description="What to decide, phrased as a question.")
+    instructions: InstructionValue = Field(
+        ..., description="What to decide, phrased as a question."
+    )
     criteria: dict[str, CriteriaValue] | list[CriteriaValue] | None = Field(
         default=None,
         description=(
@@ -132,7 +140,7 @@ class ScoreQuestion(BaseModel):
     """Rate on an ordered scale, e.g. urgency."""
 
     type: Literal["score"]
-    instructions: str
+    instructions: InstructionValue
     criteria: list[CriteriaValue] = Field(
         ...,
         description="Ordered levels, lowest first. Each may be any JSON value.",
@@ -144,7 +152,7 @@ class NoulQuestion(BaseModel):
     """Yes/no decision without a learned neutral class (n-o-u-l)."""
 
     type: Literal["noul"]
-    instructions: str
+    instructions: InstructionValue
     criteria: dict[str, CriteriaValue] | None = Field(
         default=None,
         description="Optional `false`/`true` descriptions (any JSON value).",
@@ -329,6 +337,55 @@ class PredictResponse(BaseModel):
     )
 
 
+class SystemOneNoulAnswer(BaseModel):
+    type: Literal["noul"]
+    noul: float
+
+
+class SystemOneChoiceAnswer(BaseModel):
+    type: Literal["choice"]
+    choice: str
+    probabilities: dict[str, float]
+    confidence: float
+
+
+class SystemOneScoreAnswer(BaseModel):
+    type: Literal["score"]
+    score: float
+    legend: dict[str, str]
+    probabilities: dict[str, float]
+    confidence: float
+
+
+SystemOneAnswer = Annotated[
+    SystemOneNoulAnswer | SystemOneChoiceAnswer | SystemOneScoreAnswer,
+    Field(discriminator="type"),
+]
+
+
+class SystemOneRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    state: State = Field(..., description="The content to evaluate: a string, dict, or list.")
+    model: str = Field(
+        ...,
+        description="System One model ID, e.g. laya-english, laya-multilingual, typed-decisions.",
+    )
+    questions: dict[str, Question] = Field(..., description="Typed questions map.")
+    session_id: str | None = Field(default=None, description="Optional session identifier.")
+    user: str | None = Field(default=None, description="Optional user identifier.")
+
+
+class SystemOneResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: str = Field(default_factory=lambda: f"gen-laya-{secrets.token_hex(12)}")
+    model: str
+    provider: str = "Laya"
+    answers: dict[str, SystemOneAnswer]
+    usage: Usage
+
+
 class BulkItemResult(BaseModel):
     ok: bool
     result: PredictResponse | None = None
@@ -415,9 +472,12 @@ def _router() -> Any:
     return router
 
 
-def _dump(questions: dict[str, Question]) -> dict[str, dict[str, Any]]:
+def _dump(questions: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Laya's runtime expects plain dicts, not Pydantic models."""
-    return {qid: q.model_dump(exclude_none=True) for qid, q in questions.items()}
+    return {
+        qid: q.model_dump(exclude_none=True) if hasattr(q, "model_dump") else q
+        for qid, q in questions.items()
+    }
 
 
 def _resolve(
@@ -426,6 +486,31 @@ def _resolve(
     if preset is not None:
         return _presets()[preset]
     return _dump(questions or {})
+
+
+_SYSTEMONE_MODELS: dict[str, ModelName] = {
+    "english": "english",
+    "laya-english": "english",
+    "multilingual": "multilingual",
+    "laya-multilingual": "multilingual",
+    "typed-decisions": "typed-decisions",
+    "laya-typed-decisions": "typed-decisions",
+}
+
+
+def _resolve_systemone_model(model_name: str) -> ModelName:
+    name = model_name.lower().strip()
+    if name.startswith("typesafe/"):
+        name = name.removeprefix("typesafe/")
+    if name.startswith("laya/"):
+        name = name.removeprefix("laya/")
+    if name in _SYSTEMONE_MODELS:
+        return _SYSTEMONE_MODELS[name]
+    if "multi" in name:
+        return "multilingual"
+    if "decision" in name:
+        return "typed-decisions"
+    return "english"
 
 
 _AUTH_RESPONSES: dict[int | str, dict[str, Any]] = {
@@ -553,7 +638,7 @@ def predict_bulk(request: BulkPredictRequest) -> BulkPredictResponse:
         questions = _resolve(request.questions, request.preset)
         jobs = [(state, questions, request.model) for state in request.states or []]
 
-    if len(jobs) > MAX_BULK_ITEMS:
+    if MAX_BULK_ITEMS is not None and len(jobs) > MAX_BULK_ITEMS:
         raise HTTPException(
             status_code=422,
             detail=f"Too many states: {len(jobs)} > MAX_BULK_ITEMS={MAX_BULK_ITEMS}",
@@ -575,6 +660,39 @@ def predict_bulk(request: BulkPredictRequest) -> BulkPredictResponse:
             except Exception as exc:  # noqa: BLE001 - report per-item failure
                 results.append(BulkItemResult(ok=False, error=str(exc)))
     return BulkPredictResponse(count=len(results), results=results)
+
+
+@app.post(
+    "/v1/systemone",
+    tags=["systemone", "predict"],
+    response_model=SystemOneResponse,
+    summary="SystemOne / TypeSafe-compatible prediction",
+    dependencies=[Depends(require_auth)],
+    responses=_AUTH_RESPONSES,
+)
+@app.post(
+    "/systemone",
+    include_in_schema=False,
+    response_model=SystemOneResponse,
+    dependencies=[Depends(require_auth)],
+    responses=_AUTH_RESPONSES,
+)
+def systemone_predict(request: SystemOneRequest) -> SystemOneResponse:
+    """Evaluate a SystemOne / TypeSafe-shaped request using a Laya checkpoint."""
+    router = _router()
+    model = _resolve_systemone_model(request.model)
+    with _lock:
+        result = router.predict(
+            request.state,
+            _dump(request.questions),
+            model=model,
+        )
+    validated = PredictResponse.model_validate(result)
+    return SystemOneResponse(
+        model=request.model,
+        answers={key: answer.model_dump() for key, answer in validated.answers.items()},
+        usage=validated.usage,
+    )
 
 
 # ------------------------------------------------------------------------ openapi
