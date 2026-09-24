@@ -20,7 +20,7 @@ spec:
       containers:
         - name: laya
           image: auenkr/laya-server:laya-english-amd64
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 8000
@@ -46,8 +46,8 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              cpu: "1"
-              memory: 2Gi
+              cpu: "250m"
+              memory: 1Gi
             limits:
               cpu: "2"
               memory: 4Gi

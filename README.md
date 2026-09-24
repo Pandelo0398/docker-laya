@@ -42,7 +42,8 @@ docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/
 ```
 
 First start downloads the checkpoint (~1 GB) into the `hf-cache` volume. Bake it
-into the image for instant/offline startup with `PRELOAD_MODEL=1`.
+into the image for instant/offline startup with `PRELOAD_MODEL=1`; published
+model images include the complete cache and run with Hugging Face offline mode.
 
 To publish one architecture-specific image per model to Docker Hub:
 

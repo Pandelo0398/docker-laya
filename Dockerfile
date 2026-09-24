@@ -39,6 +39,11 @@ RUN if [ "$PRELOAD_MODEL" = "1" ]; then \
             "import os; from laya import Router; Router().preload([m.strip() for m in os.environ['MODELS'].split(',') if m.strip()])"; \
     fi
 
+# The published images must run from their baked cache without contacting the Hub.
+ENV HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_DATASETS_OFFLINE=1
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
