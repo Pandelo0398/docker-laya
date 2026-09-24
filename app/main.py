@@ -26,7 +26,8 @@ for _pair in os.environ.get("BASIC_AUTH", "").split(","):
         BASIC_AUTH.append((_user.strip(), _password.strip()))
 
 AUTH_ENABLED = bool(API_KEYS or BASIC_AUTH)
-MAX_BULK_ITEMS = int(os.environ.get("MAX_BULK_ITEMS", "256"))
+_max_bulk_env = os.environ.get("MAX_BULK_ITEMS", "").strip()
+MAX_BULK_ITEMS: int | None = int(_max_bulk_env) if _max_bulk_env and _max_bulk_env != "0" else None
 
 # Checkpoints to keep resident at startup (comma-separated).
 MODELS = [m.strip() for m in os.environ.get("MODELS", "english").split(",") if m.strip()]
@@ -637,7 +638,7 @@ def predict_bulk(request: BulkPredictRequest) -> BulkPredictResponse:
         questions = _resolve(request.questions, request.preset)
         jobs = [(state, questions, request.model) for state in request.states or []]
 
-    if len(jobs) > MAX_BULK_ITEMS:
+    if MAX_BULK_ITEMS is not None and len(jobs) > MAX_BULK_ITEMS:
         raise HTTPException(
             status_code=422,
             detail=f"Too many states: {len(jobs)} > MAX_BULK_ITEMS={MAX_BULK_ITEMS}",

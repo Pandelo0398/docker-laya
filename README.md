@@ -187,7 +187,7 @@ Supported model names for TypeSafe requests:
 | --- | --- | --- |
 | `API_KEYS` | *(empty)* | Comma-separated keys; empty disables API-key auth. |
 | `BASIC_AUTH` | *(empty)* | Comma-separated `user:password` pairs. |
-| `MAX_BULK_ITEMS` | `256` | Max states per `/predict/bulk`. |
+| `MAX_BULK_ITEMS` | *(empty / unlimited)* | Optional limit on states per `/predict/bulk` (unlimited by default). |
 | `PORT` | `8000` | HTTP port (host and container). |
 | `MODELS` | `english` | Checkpoints to preload: `english`, `multilingual`, `typed-decisions`. |
 | `MODEL_ID` | `convaiinnovations/laya` | Optional repo override (mirror/local path). |
