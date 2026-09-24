@@ -88,7 +88,6 @@ app = FastAPI(
 State = str | dict[str, Any] | list[Any]
 CriteriaValue = Any  # str, number, bool, list or dict; rendered as compact JSON
 
-_PRESET_NAMES = ("triage", "email", "guard", "moderation", "router")
 PresetName = Literal["triage", "email", "guard", "moderation", "router"]
 
 _presets_cache: dict[str, dict[str, Any]] = {}
