@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Laya API",
-    version="0.6.0",
+    version="0.6.1",
     lifespan=lifespan,
     description=(
         "Run Laya typed decisions (choice / score / noul) over text, JSON objects "

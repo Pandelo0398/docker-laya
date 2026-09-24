@@ -3,7 +3,7 @@
   "info": {
     "title": "Laya API",
     "description": "Run Laya typed decisions (choice / score / noul) over text, JSON objects or conversation turns, using your own questions or a built-in preset. Requests are auto-routed to the best checkpoint, or pinned with `model`.\n\nAuthenticate with an API key (`X-API-Key` or `Authorization: Bearer`) or HTTP Basic, whichever is configured on the server.",
-    "version": "0.6.0"
+    "version": "0.6.1"
   },
   "paths": {
     "/healthz": {
