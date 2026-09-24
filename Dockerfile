@@ -23,19 +23,21 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY --chown=appuser:appuser app ./app
 
+# Prepare the cache before downloading so the model layer is not duplicated by
+# a later recursive chown.
+RUN mkdir -p /data/hf && chown -R appuser:appuser /app /data/hf
+
+USER appuser
+
 # Optional: bake the checkpoint(s) into the image for instant/offline startup.
 # Build with --build-arg PRELOAD_MODEL=1 (adds ~1 GB, needs network at build).
 ARG PRELOAD_MODEL=0
 ARG MODELS=english
+ENV MODELS=${MODELS}
 RUN if [ "$PRELOAD_MODEL" = "1" ]; then \
         MODELS="$MODELS" uv run --no-dev python -c \
             "import os; from laya import Router; Router().preload([m.strip() for m in os.environ['MODELS'].split(',') if m.strip()])"; \
     fi
-
-# Own the app and the HF cache mount so a fresh named volume inherits appuser.
-RUN mkdir -p /data/hf && chown -R appuser:appuser /app /data/hf
-
-USER appuser
 
 EXPOSE 8000
 

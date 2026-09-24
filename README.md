@@ -44,6 +44,22 @@ docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/
 First start downloads the checkpoint (~1 GB) into the `hf-cache` volume. Bake it
 into the image for instant/offline startup with `PRELOAD_MODEL=1`.
 
+To publish one architecture-specific image per model to Docker Hub:
+
+```sh
+for model in english multilingual typed-decisions; do
+  for arch in amd64 arm64; do
+    docker buildx build --platform linux/$arch --push \
+      --build-arg PRELOAD_MODEL=1 --build-arg MODELS=$model \
+      -t auenkr/laya-server:laya-$model-$arch .
+  done
+done
+```
+
+This publishes six tags: `laya-english-amd64`, `laya-english-arm64`,
+`laya-multilingual-amd64`, `laya-multilingual-arm64`,
+`laya-typed-decisions-amd64`, and `laya-typed-decisions-arm64`.
+
 ### Check Health
 
 ```bash

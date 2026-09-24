@@ -1,6 +1,6 @@
 PORT ?= 8000
 
-.PHONY: help run format check fix openapi up down build logs
+.PHONY: help run format check fix openapi up down build build-model logs
 
 help:
 	@echo "make run     - run the API locally (uvicorn --reload on $(PORT))"
@@ -11,6 +11,7 @@ help:
 	@echo "make up      - docker compose up --build (detached)"
 	@echo "make down    - docker compose down"
 	@echo "make build   - docker build the image"
+	@echo "make build-model MODEL=english - build an image with one model baked in"
 	@echo "make logs    - follow container logs"
 
 run:
@@ -36,6 +37,9 @@ down:
 
 build:
 	docker build -t laya-api:latest .
+
+build-model:
+	docker build --build-arg PRELOAD_MODEL=1 --build-arg MODELS=$(MODEL) -t laya-server:$(MODEL) .
 
 logs:
 	docker compose logs -f
