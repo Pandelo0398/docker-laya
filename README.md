@@ -49,11 +49,22 @@ docker pull ghcr.io/chneau/laya
 docker run -d -p 8000:8000 -e API_KEYS=key1 -v hf-cache:/data/hf ghcr.io/chneau/laya
 ```
 
-First start downloads the checkpoint (~1 GB) into the `hf-cache` volume. Bake it
-into the image for instant/offline startup with `PRELOAD_MODEL=1`:
+### 🏷️ Docker Image Tags & Model Variants
+
+Multi-architecture images (`linux/amd64` and `linux/arm64`) are published to GitHub Container Registry under several tags:
+
+| Image Tag | Preloaded Models | Image Size | Description |
+| :--- | :--- | :--- | :--- |
+| `ghcr.io/chneau/laya:latest` (or `v0.5.0`) | None (Dynamic) | ~300 MB | **Slim / Default**: Small image size. Downloads model on first run into `/data/hf`. |
+| `ghcr.io/chneau/laya:english` | `english` | ~1.3 GB | **Instant Startup (English)**: Pre-baked English checkpoint, offline-ready. |
+| `ghcr.io/chneau/laya:multilingual` | `multilingual` | ~1.8 GB | **Instant Startup (Multilingual)**: Pre-baked multilingual checkpoint. |
+| `ghcr.io/chneau/laya:typed-decisions` | `typed-decisions` | ~1.3 GB | **Instant Startup (Typed Decisions)**: Pre-baked typed decisions checkpoint. |
+| `ghcr.io/chneau/laya:all` | All 3 models | ~3.5 GB | **Full Bundle**: All checkpoints pre-baked for zero-latency multi-model routing. |
+
+#### Running a Pre-baked Image (Instant Startup & Air-gapped / Offline)
 
 ```bash
-make build-model MODEL=english
+docker run -d -p 8000:8000 -e API_KEYS=key1 ghcr.io/chneau/laya:english
 ```
 
 ### Check Health
